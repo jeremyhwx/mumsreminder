@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reminders">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon.png">
+<title>Mum's Reminders</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Nunito', sans-serif; background: #FFF8F0; color: #3a2a1a; min-height: 100vh; }
+
+  /* MAIN */
+  .main { padding: 28px 20px 120px; max-width: 480px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 28px; }
+  .header h1 { font-size: 34px; font-weight: 900; color: #c05c1a; }
+  .header p { font-size: 15px; color: #8a6a4a; margin-top: 4px; }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    background: #fff3e0; border: 2px solid #ffb74d; border-radius: 16px;
+    padding: 14px 18px; margin-bottom: 20px; font-size: 14px; color: #7a4a0a; line-height: 1.5;
+    display: none;
+  }
+  .install-banner strong { display: block; font-size: 15px; margin-bottom: 4px; }
+
+  /* REMINDER CARDS */
+  .reminder-card {
+    background: white; border-radius: 20px; padding: 18px 20px;
+    margin-bottom: 14px; border: 2px solid #ffe0c0;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .reminder-card .left { display: flex; align-items: center; gap: 14px; }
+  .r-icon { font-size: 36px; line-height: 1; }
+  .r-info h2 { font-size: 21px; font-weight: 700; color: #3a2a1a; }
+  .r-info .time { font-size: 17px; color: #c05c1a; font-weight: 700; margin-top: 2px; }
+  .r-info .sched { font-size: 13px; color: #8a6a4a; margin-top: 2px; }
+  .del-btn {
+    background: #fff0e8; border: none; border-radius: 12px;
+    width: 42px; height: 42px; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .empty { text-align: center; padding: 32px 20px; color: #b09070; font-size: 18px; line-height: 1.6; }
+
+  /* FLOATING ADD BUTTON */
+  .fab {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    background: #c05c1a; color: white; border: none;
+    font-family: 'Nunito', sans-serif; font-size: 20px; font-weight: 900;
+    padding: 18px 36px; border-radius: 40px; cursor: pointer;
+    box-shadow: 0 6px 24px rgba(192,92,26,0.4); white-space: nowrap;
+  }
+
+  /* MODAL */
+  .modal-bg {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #FFF8F0; border-radius: 28px 28px 0 0;
+    padding: 28px 24px 48px; width: 100%; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 22px; font-weight: 900; color: #c05c1a; margin-bottom: 22px; }
+  .form-row { margin-bottom: 18px; }
+  .form-row label { display: block; font-size: 14px; font-weight: 700; color: #8a6a4a; margin-bottom: 7px; }
+  .form-row input {
+    width: 100%; font-family: 'Nunito', sans-serif; font-size: 18px;
+    padding: 13px 16px; border: 2px solid #ffe0c0; border-radius: 14px;
+    color: #3a2a1a; background: white; outline: none;
+  }
+  .form-row input:focus { border-color: #c05c1a; }
+
+  .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .icon-btn {
+    font-size: 30px; padding: 10px 0; background: white; border: 2px solid #ffe0c0;
+    border-radius: 12px; cursor: pointer; text-align: center;
+  }
+  .icon-btn.sel { background: #fff0e4; border-color: #c05c1a; }
+
+  .freq-row { display: flex; gap: 10px; }
+  .freq-btn {
+    flex: 1; padding: 12px; font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 700;
+    border: 2px solid #ffe0c0; border-radius: 12px; background: white; color: #8a6a4a; cursor: pointer;
+  }
+  .freq-btn.sel { background: #c05c1a; color: white; border-color: #c05c1a; }
+
+  .day-grid { display: flex; gap: 6px; }
+  .day-btn {
+    flex: 1; padding: 10px 0; font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 700;
+    border: 2px solid #ffe0c0; border-radius: 10px; background: white; color: #8a6a4a; cursor: pointer;
+  }
+  .day-btn.sel { background: #c05c1a; color: white; border-color: #c05c1a; }
+
+  .save-btn {
+    width: 100%; background: #c05c1a; color: white; font-family: 'Nunito', sans-serif;
+    font-size: 22px; font-weight: 900; padding: 18px; border: none; border-radius: 16px;
+    cursor: pointer; margin-top: 10px;
+  }
+  .cancel-btn {
+    width: 100%; background: transparent; color: #8a6a4a; font-family: 'Nunito', sans-serif;
+    font-size: 17px; font-weight: 700; padding: 14px; border: none; cursor: pointer; margin-top: 6px;
+  }
+
+  /* ALARM OVERLAY */
+  .alarm {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 24px; text-align: center;
+    animation: flashBg 1s ease-in-out infinite alternate;
+  }
+  .alarm.on { display: flex; }
+  @keyframes flashBg { from { background: #c0310a; } to { background: #e05020; } }
+  .alarm-icon { font-size: 110px; animation: abounce 0.6s ease-in-out infinite alternate; margin-bottom: 20px; }
+  @keyframes abounce { from { transform: scale(1); } to { transform: scale(1.18); } }
+  .alarm-title { font-size: 52px; font-weight: 900; color: white; line-height: 1.1; margin-bottom: 12px; text-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+  .alarm-sub { font-size: 26px; font-weight: 700; color: #ffe0c0; margin-bottom: 60px; }
+  .dismiss-btn {
+    background: white; color: #c0310a; font-family: 'Nunito', sans-serif;
+    font-size: 32px; font-weight: 900; padding: 26px 60px; border: none; border-radius: 30px;
+    cursor: pointer; animation: apulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes apulse {
+    from { transform: scale(1); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    to { transform: scale(1.07); box-shadow: 0 14px 48px rgba(0,0,0,0.35); }
+  }
+
+  /* NOTIFY PROMPT */
+  .notify-btn {
+    width: 100%; background: #2d6a2d; color: white; font-family: 'Nunito', sans-serif;
+    font-size: 16px; font-weight: 700; padding: 14px; border: none; border-radius: 14px;
+    cursor: pointer; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="main">
+  <div class="header">
+    <h1>Mum's Reminders</h1>
+    <p>Simple, loud, impossible to miss</p>
+  </div>
+
+  <div class="install-banner" id="installBanner">
+    <strong>📲 Add to Home Screen for alarms to work!</strong>
+    Tap the Share button in Safari, then tap "Add to Home Screen". Then open the app from your home screen.
+  </div>
+
+  <button class="notify-btn" id="notifyBtn" onclick="enableNotifications()" style="display:none;">
+    🔔 Enable Alarm Notifications
+  </button>
+
+  <div id="reminderList"></div>
+</div>
+
+<button class="fab" onclick="openModal()">+ Add Reminder</button>
+
+<!-- ADD REMINDER MODAL -->
+<div class="modal-bg" id="modalBg" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <h2>New Reminder</h2>
+    <div class="form-row">
+      <label>What is the reminder?</label>
+      <input type="text" id="rText" placeholder="e.g. Take medicine" />
+    </div>
+    <div class="form-row">
+      <label>Pick an icon</label>
+      <div class="icon-grid" id="iconGrid"></div>
+    </div>
+    <div class="form-row">
+      <label>What time?</label>
+      <input type="time" id="rTime" />
+    </div>
+    <div class="form-row">
+      <label>How often?</label>
+      <div class="freq-row">
+        <button class="freq-btn sel" id="fDaily" onclick="setFreq('daily')">Every day</button>
+        <button class="freq-btn" id="fWeekly" onclick="setFreq('weekly')">Specific days</button>
+      </div>
+    </div>
+    <div class="form-row" id="dayRow" style="display:none;">
+      <label>Which days?</label>
+      <div class="day-grid">
+        <button class="day-btn" data-d="0" onclick="toggleDay(this)">Sun</button>
+        <button class="day-btn" data-d="1" onclick="toggleDay(this)">Mon</button>
+        <button class="day-btn" data-d="2" onclick="toggleDay(this)">Tue</button>
+        <button class="day-btn" data-d="3" onclick="toggleDay(this)">Wed</button>
+        <button class="day-btn" data-d="4" onclick="toggleDay(this)">Thu</button>
+        <button class="day-btn" data-d="5" onclick="toggleDay(this)">Fri</button>
+        <button class="day-btn" data-d="6" onclick="toggleDay(this)">Sat</button>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveReminder()">Save Reminder</button>
+    <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ALARM -->
+<div class="alarm" id="alarmOverlay">
+  <div class="alarm-icon" id="alarmIcon">💊</div>
+  <div class="alarm-title" id="alarmTitle">Take your medicine!</div>
+  <div class="alarm-sub">Time to do it now!</div>
+  <button class="dismiss-btn" onclick="dismissAlarm()">✅ Done!</button>
+</div>
+
+<script>
+const ICONS = ['💊','💧','🏃','🍽️','📞','💉','😴','🚶','📅','🔔'];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let selectedIcon = '💊';
+let selectedFreq = 'daily';
+let selectedDays = [];
+let audioCtx = null, alarmTimer = null;
+let reminders = [];
+
+// --- Init ---
+async function init() {
+  buildIconGrid();
+  await loadReminders();
+  checkInstallPrompt();
+  checkNotificationStatus();
+  checkUrlAlarm();
+  registerSW();
+}
+
+function buildIconGrid() {
+  const grid = document.getElementById('iconGrid');
+  grid.innerHTML = ICONS.map(ic =>
+    `<button class="icon-btn${ic === selectedIcon ? ' sel' : ''}" onclick="selectIcon('${ic}',this)">${ic}</button>`
+  ).join('');
+}
+
+function selectIcon(ic, btn) {
+  selectedIcon = ic;
+  document.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+// --- Reminders ---
+async function loadReminders() {
+  const res = await fetch('/api/reminders');
+  reminders = await res.json();
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('reminderList');
+  if (!reminders.length) {
+    list.innerHTML = '<div class="empty">No reminders yet.<br>Tap + to add one! 🔔</div>';
+    return;
+  }
+  list.innerHTML = reminders.map(r => `
+    <div class="reminder-card">
+      <div class="left">
+        <div class="r-icon">${r.icon}</div>
+        <div class="r-info">
+          <h2>${r.text}</h2>
+          <div class="time">${fmt12(r.time)}</div>
+          <div class="sched">${schedLabel(r)}</div>
+        </div>
+      </div>
+      <button class="del-btn" onclick="deleteReminder('${r.id}')">🗑️</button>
+    </div>
+  `).join('');
+}
+
+function fmt12(t) {
+  const [h, m] = t.split(':').map(Number);
+  return `${h % 12 || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+
+function schedLabel(r) {
+  if (r.frequency === 'daily') return 'Every day';
+  return 'Every ' + r.days.map(d => DAY_NAMES[d]).join(', ');
+}
+
+async function deleteReminder(id) {
+  await fetch(`/api/reminders/${id}`, { method: 'DELETE' });
+  await loadReminders();
+}
+
+// --- Modal ---
+function openModal() { document.getElementById('modalBg').classList.add('open'); }
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function closeModalIfBg(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
+function setFreq(f) {
+  selectedFreq = f;
+  document.getElementById('fDaily').classList.toggle('sel', f === 'daily');
+  document.getElementById('fWeekly').classList.toggle('sel', f === 'weekly');
+  document.getElementById('dayRow').style.display = f === 'weekly' ? 'block' : 'none';
+}
+function toggleDay(btn) {
+  const d = parseInt(btn.dataset.d);
+  if (selectedDays.includes(d)) { selectedDays = selectedDays.filter(x => x !== d); btn.classList.remove('sel'); }
+  else { selectedDays.push(d); btn.classList.add('sel'); }
+}
+
+async function saveReminder() {
+  const text = document.getElementById('rText').value.trim();
+  const time = document.getElementById('rTime').value;
+  if (!text || !time) { alert('Please fill in the reminder and time!'); return; }
+  if (selectedFreq === 'weekly' && selectedDays.length === 0) { alert('Please pick at least one day!'); return; }
+  await fetch('/api/reminders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, icon: selectedIcon, time, frequency: selectedFreq, days: [...selectedDays].sort() })
+  });
+  document.getElementById('rText').value = '';
+  document.getElementById('rTime').value = '';
+  selectedDays = [];
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('sel'));
+  setFreq('daily');
+  closeModal();
+  await loadReminders();
+}
+
+// --- Alarm ---
+function triggerAlarm(text, icon) {
+  document.getElementById('alarmIcon').textContent = icon || '🔔';
+  document.getElementById('alarmTitle').textContent = (text || 'Reminder') + '!';
+  document.getElementById('alarmOverlay').classList.add('on');
+  startSound();
+}
+function dismissAlarm() {
+  document.getElementById('alarmOverlay').classList.remove('on');
+  stopSound();
+}
+function startSound() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function beep() {
+    [880, 880, 1100, 1100].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'square'; o.frequency.value = f;
+      const t = audioCtx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.45, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      o.start(t); o.stop(t + 0.16);
+    });
+  }
+  beep();
+  alarmTimer = setInterval(beep, 2000);
+}
+function stopSound() { clearInterval(alarmTimer); if (audioCtx) { audioCtx.close(); audioCtx = null; } }
+
+function checkUrlAlarm() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('alarm') === '1') {
+    triggerAlarm(p.get('text'), p.get('icon'));
+    history.replaceState({}, '', '/');
+  }
+}
+
+// --- Push Notifications ---
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    console.log('SW registered');
+    // Auto-subscribe if already granted
+    if (Notification.permission === 'granted') {
+      await subscribePush(reg);
+    }
+  } catch (e) { console.error('SW error', e); }
+}
+
+function checkNotificationStatus() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') {
+    document.getElementById('notifyBtn').style.display = 'block';
+  }
+}
+
+async function enableNotifications() {
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('notifyBtn').style.display = 'none';
+    const reg = await navigator.serviceWorker.ready;
+    await subscribePush(reg);
+    alert('Notifications enabled! Alarms will now fire even when the phone is locked. ✅');
+  } else {
+    alert('Please allow notifications in your phone settings so alarms can fire.');
+  }
+}
+
+async function subscribePush(reg) {
+  try {
+    const keyRes = await fetch('/api/vapid-public-key');
+    const { key } = await keyRes.json();
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key)
+    });
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub)
+    });
+  } catch (e) { console.error('Push subscribe error', e); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+function checkInstallPrompt() {
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (!isStandalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    document.getElementById('installBanner').style.display = 'block';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
