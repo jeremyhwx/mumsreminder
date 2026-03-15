@@ -82,15 +82,13 @@ cron.schedule('* * * * *', () => {
   if (!data.reminders.length || !data.subscriptions.length) return;
 
   const now = new Date();
-  // Use Singapore time (UTC+8)
   const sgTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Singapore' }));
   const currentHour = sgTime.getHours();
   const currentMinute = sgTime.getMinutes();
-  const currentDay = sgTime.getDay(); // 0=Sun, 1=Mon...6=Sat
+  const currentDay = sgTime.getDay();
 
   data.reminders.forEach(reminder => {
     const [rHour, rMin] = reminder.time.split(':').map(Number);
-    if (rHour !== currentHour || rMin !== currentMinute) return;
 
     const shouldFire =
       reminder.frequency === 'daily' ||
@@ -98,11 +96,28 @@ cron.schedule('* * * * *', () => {
 
     if (!shouldFire) return;
 
-    console.log(`Firing reminder: ${reminder.text} at ${reminder.time}`);
+    // Fire at exact time, then again at +2 min and +4 min if not dismissed
+    const minuteDiff = (currentHour * 60 + currentMinute) - (rHour * 60 + rMin);
+    const isReminder = minuteDiff === 0 || minuteDiff === 2 || minuteDiff === 4;
+    if (!isReminder) return;
 
+    const firedKey = `${reminder.id}-${rHour}-${rMin}-${sgTime.toDateString()}-${minuteDiff}`;
+    if (data.firedKeys && data.firedKeys[firedKey]) return;
+
+    // Track fired keys (clean up old ones)
+    if (!data.firedKeys) data.firedKeys = {};
+    data.firedKeys[firedKey] = true;
+    // Keep firedKeys from growing forever — only keep today's
+    const today = sgTime.toDateString();
+    Object.keys(data.firedKeys).forEach(k => { if (!k.includes(today)) delete data.firedKeys[k]; });
+    saveData(data);
+
+    console.log(`Firing reminder: ${reminder.text} (offset ${minuteDiff}min)`);
+
+    const suffix = minuteDiff === 0 ? '' : minuteDiff === 2 ? ' (reminder)' : ' (final reminder)';
     const payload = JSON.stringify({
-      title: reminder.icon + ' ' + reminder.text,
-      body: 'Tap to open',
+      title: reminder.icon + ' ' + reminder.text + suffix,
+      body: minuteDiff === 0 ? 'Tap to open' : "Don't forget! Tap to open",
       icon: reminder.icon,
       reminderText: reminder.text,
       reminderIcon: reminder.icon,
@@ -111,7 +126,6 @@ cron.schedule('* * * * *', () => {
     data.subscriptions.forEach(sub => {
       webpush.sendNotification(sub, payload).catch(err => {
         console.error('Push failed:', err.statusCode);
-        // Remove dead subscriptions
         if (err.statusCode === 410) {
           data.subscriptions = data.subscriptions.filter(s => s.endpoint !== sub.endpoint);
           saveData(data);

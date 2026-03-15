@@ -331,18 +331,19 @@ function dismissAlarm() {
 function startSound() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function beep() {
-    [880, 880, 1100, 1100].forEach((f, i) => {
+    const pattern = [1200, 1200, 1200, 800];
+    pattern.forEach((f, i) => {
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.connect(g); g.connect(audioCtx.destination);
       o.type = 'square'; o.frequency.value = f;
-      const t = audioCtx.currentTime + i * 0.18;
-      g.gain.setValueAtTime(0.45, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-      o.start(t); o.stop(t + 0.16);
+      const t = audioCtx.currentTime + i * 0.22;
+      g.gain.setValueAtTime(0.6, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      o.start(t); o.stop(t + 0.19);
     });
   }
   beep();
-  alarmTimer = setInterval(beep, 2000);
+  alarmTimer = setInterval(beep, 1500);
 }
 function stopSound() { clearInterval(alarmTimer); if (audioCtx) { audioCtx.close(); audioCtx = null; } }
 
